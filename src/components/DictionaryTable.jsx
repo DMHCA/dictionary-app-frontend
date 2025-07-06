@@ -33,8 +33,7 @@ function DictionaryTable() {
             params.append('learned', learned);
         }
 
-        // Выбираем эндпоинт в зависимости от наличия слова поиска
-        let url = searchTerm.trim() !== ''
+        const url = searchTerm.trim() !== ''
             ? `http://54.174.228.227:8090/api/records/search?${params.toString()}`
             : `http://54.174.228.227:8090/api/records/page?${params.toString()}`;
 
@@ -68,16 +67,23 @@ function DictionaryTable() {
         setPage(0);
     };
 
-    const handleLearnedChange = (e) => {
-        const val = e.target.value;
-        if (val === '') {
-            setLearned(null);
-        } else if (val === 'true') {
-            setLearned(true);
-        } else {
-            setLearned(false);
-        }
+    const handleLearnedFilterChange = (e) => {
+        const value = e.target.value;
+        setLearned(value === '' ? null : value === 'true');
         setPage(0);
+    };
+
+    const handleLearnedToggle = (id, newLearned) => {
+        fetch(`http://54.174.228.227:8090/api/records/${id}/learned?learned=${newLearned}`, {
+            method: 'PATCH',
+        })
+            .then(res => {
+                if (!res.ok) throw new Error('Failed to update learned status');
+                setRecords(records.map(rec => rec.id === id ? { ...rec, learned: newLearned } : rec));
+            })
+            .catch(() => {
+                alert('Error updating learned status');
+            });
     };
 
     const handlePrev = () => {
@@ -123,10 +129,13 @@ function DictionaryTable() {
                     <option value="verb">Verb</option>
                     <option value="adjective">Adjective</option>
                     <option value="adverb">Adverb</option>
-                    {/* Добавь другие значения частей речи, если нужно */}
+                    {/* Add more parts of speech as needed */}
                 </select>
 
-                <select value={learned === null ? '' : learned.toString()} onChange={handleLearnedChange}>
+                <select
+                    value={learned === null ? '' : learned.toString()}
+                    onChange={handleLearnedFilterChange}
+                >
                     <option value="">All</option>
                     <option value="true">Learned</option>
                     <option value="false">Not Learned</option>
@@ -136,6 +145,7 @@ function DictionaryTable() {
             </div>
 
             {loading && <div>Loading...</div>}
+
             <table>
                 <thead style={{ position: 'sticky', top: 0, backgroundColor: 'white' }}>
                 <tr>
@@ -159,7 +169,13 @@ function DictionaryTable() {
                             {rec.usAudioUrl && <AudioPlayer src={rec.usAudioUrl} />}
                         </td>
                         <td>{rec.pos}</td>
-                        <td>{rec.learned ? '✅' : '❌'}</td>
+                        <td>
+                            <input
+                                type="checkbox"
+                                checked={rec.learned}
+                                onChange={e => handleLearnedToggle(rec.id, e.target.checked)}
+                            />
+                        </td>
                     </tr>
                 ))}
                 </tbody>
