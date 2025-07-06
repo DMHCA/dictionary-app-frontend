@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
+import AudioPlayer from "./AudioPlayer";
 
 function DictionaryTable() {
     const [records, setRecords] = useState([]);
@@ -6,17 +7,42 @@ function DictionaryTable() {
     const [size] = useState(50);
     const [totalPages, setTotalPages] = useState(0);
     const [loading, setLoading] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
+    const debounceRef = useRef(null);
 
     useEffect(() => {
         setLoading(true);
-        fetch(`http://54.174.228.227:8090/api/records/page?page=${page}&size=${size}`)
+
+        const params = new URLSearchParams({
+            page,
+            size,
+        });
+
+        let url = `http://54.174.228.227:8090/api/records/page?${params}`;
+
+        if (searchTerm.trim() !== '') {
+            params.append('word', searchTerm.trim());
+            url = `http://54.174.228.227:8090/api/records/search?${params}`;
+        }
+
+        fetch(url)
             .then(res => res.json())
             .then(data => {
                 setRecords(data.content);
                 setTotalPages(data.totalPages);
                 setLoading(false);
             });
-    }, [page, size]);
+    }, [page, size, searchTerm]);
+
+    const handleSearchChange = (e) => {
+        const value = e.target.value;
+        clearTimeout(debounceRef.current);
+
+        debounceRef.current = setTimeout(() => {
+            setSearchTerm(value);
+            setPage(0); // Сброс на первую страницу при поиске
+        }, 300);
+    };
 
     const handlePrev = () => {
         if (page > 0) setPage(page - 1);
@@ -28,6 +54,15 @@ function DictionaryTable() {
 
     return (
         <div>
+            <div style={{ marginBottom: '10px' }}>
+                <input
+                    type="text"
+                    placeholder="Search by word..."
+                    onChange={handleSearchChange}
+                    style={{ padding: '5px', width: '200px' }}
+                />
+            </div>
+
             {loading && <div>Loading...</div>}
             <table>
                 <thead style={{ position: 'sticky', top: 0, backgroundColor: 'white' }}>
@@ -49,7 +84,7 @@ function DictionaryTable() {
                         <td>{rec.level}</td>
                         <td>{rec.translation}</td>
                         <td>
-                            {rec.usAudioUrl && <audio src={rec.usAudioUrl} controls style={{ width: '100px' }} />}
+                            {rec.usAudioUrl && <AudioPlayer src={rec.usAudioUrl} />}
                         </td>
                         <td>{rec.pos}</td>
                         <td>{rec.learned ? '✅' : '❌'}</td>
