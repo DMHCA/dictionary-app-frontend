@@ -8,22 +8,35 @@ function DictionaryTable() {
     const [totalPages, setTotalPages] = useState(0);
     const [loading, setLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
+    const [level, setLevel] = useState('');
+    const [pos, setPos] = useState('');
+    const [learned, setLearned] = useState(null);
     const debounceRef = useRef(null);
 
     useEffect(() => {
         setLoading(true);
 
-        const params = new URLSearchParams({
-            page,
-            size,
-        });
-
-        let url = `http://54.174.228.227:8090/api/records/page?${params}`;
+        const params = new URLSearchParams();
+        params.append('page', page);
+        params.append('size', size);
 
         if (searchTerm.trim() !== '') {
             params.append('word', searchTerm.trim());
-            url = `http://54.174.228.227:8090/api/records/search?${params}`;
         }
+        if (level) {
+            params.append('level', level);
+        }
+        if (pos) {
+            params.append('pos', pos);
+        }
+        if (learned !== null) {
+            params.append('learned', learned);
+        }
+
+        // Выбираем эндпоинт в зависимости от наличия слова поиска
+        let url = searchTerm.trim() !== ''
+            ? `http://54.174.228.227:8090/api/records/search?${params.toString()}`
+            : `http://54.174.228.227:8090/api/records/page?${params.toString()}`;
 
         fetch(url)
             .then(res => res.json())
@@ -31,8 +44,9 @@ function DictionaryTable() {
                 setRecords(data.content);
                 setTotalPages(data.totalPages);
                 setLoading(false);
-            });
-    }, [page, size, searchTerm]);
+            })
+            .catch(() => setLoading(false));
+    }, [page, size, searchTerm, level, pos, learned]);
 
     const handleSearchChange = (e) => {
         const value = e.target.value;
@@ -40,8 +54,30 @@ function DictionaryTable() {
 
         debounceRef.current = setTimeout(() => {
             setSearchTerm(value);
-            setPage(0); // Сброс на первую страницу при поиске
+            setPage(0);
         }, 300);
+    };
+
+    const handleLevelChange = (e) => {
+        setLevel(e.target.value);
+        setPage(0);
+    };
+
+    const handlePosChange = (e) => {
+        setPos(e.target.value);
+        setPage(0);
+    };
+
+    const handleLearnedChange = (e) => {
+        const val = e.target.value;
+        if (val === '') {
+            setLearned(null);
+        } else if (val === 'true') {
+            setLearned(true);
+        } else {
+            setLearned(false);
+        }
+        setPage(0);
     };
 
     const handlePrev = () => {
@@ -52,15 +88,51 @@ function DictionaryTable() {
         if (page + 1 < totalPages) setPage(page + 1);
     };
 
+    const handleClearFilters = () => {
+        setSearchTerm('');
+        setLevel('');
+        setPos('');
+        setLearned(null);
+        setPage(0);
+    };
+
     return (
         <div>
-            <div style={{ marginBottom: '10px' }}>
+            <div style={{ marginBottom: '10px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                 <input
                     type="text"
                     placeholder="Search by word..."
                     onChange={handleSearchChange}
+                    value={searchTerm}
                     style={{ padding: '5px', width: '200px' }}
                 />
+
+                <select value={level} onChange={handleLevelChange}>
+                    <option value="">All Levels</option>
+                    <option value="A1">A1</option>
+                    <option value="A2">A2</option>
+                    <option value="B1">B1</option>
+                    <option value="B2">B2</option>
+                    <option value="C1">C1</option>
+                    <option value="C2">C2</option>
+                </select>
+
+                <select value={pos} onChange={handlePosChange}>
+                    <option value="">All POS</option>
+                    <option value="noun">Noun</option>
+                    <option value="verb">Verb</option>
+                    <option value="adjective">Adjective</option>
+                    <option value="adverb">Adverb</option>
+                    {/* Добавь другие значения частей речи, если нужно */}
+                </select>
+
+                <select value={learned === null ? '' : learned.toString()} onChange={handleLearnedChange}>
+                    <option value="">All</option>
+                    <option value="true">Learned</option>
+                    <option value="false">Not Learned</option>
+                </select>
+
+                <button onClick={handleClearFilters}>Clear Filters</button>
             </div>
 
             {loading && <div>Loading...</div>}
