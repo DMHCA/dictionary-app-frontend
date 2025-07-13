@@ -2,6 +2,8 @@ import React, { useEffect, useState, useRef } from 'react';
 import AudioPlayer from "./AudioPlayer";
 
 function DictionaryTable() {
+    const baseUrl = process.env.REACT_APP_API_URL;
+
     const [records, setRecords] = useState([]);
     const [page, setPage] = useState(0);
     const [size] = useState(50);
@@ -34,8 +36,8 @@ function DictionaryTable() {
         }
 
         const url = searchTerm.trim() !== ''
-            ? `http://54.174.228.227:8090/api/records/search?${params.toString()}`
-            : `http://54.174.228.227:8090/api/records/page?${params.toString()}`;
+            ? `${baseUrl}/api/records/search?${params.toString()}`
+            : `${baseUrl}/api/records/page?${params.toString()}`;
 
         fetch(url)
             .then(res => res.json())
@@ -45,7 +47,7 @@ function DictionaryTable() {
                 setLoading(false);
             })
             .catch(() => setLoading(false));
-    }, [page, size, searchTerm, level, pos, learned]);
+    }, [page, size, searchTerm, level, pos, learned, baseUrl]);
 
     const handleSearchChange = (e) => {
         const value = e.target.value;
@@ -74,7 +76,7 @@ function DictionaryTable() {
     };
 
     const handleLearnedToggle = (id, newLearned) => {
-        fetch(`http://54.174.228.227:8090/api/records/${id}/learned?learned=${newLearned}`, {
+        fetch(`${baseUrl}/api/records/${id}/learned?learned=${newLearned}`, {
             method: 'PATCH',
         })
             .then(res => {
